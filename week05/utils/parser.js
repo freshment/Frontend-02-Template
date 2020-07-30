@@ -1,9 +1,69 @@
+const css = require('css')
 const EOF = Symbol('EOF') // End Of File
 let currentToken = null
 let currentAttribute = null
 let currentTextNode = null
 
 let stack = [{ type: 'document', children: [] }] // 初始化值
+
+// 加入一个新函数，addCSSRules,这里我们把CSS规则暂存到一个数组里
+let rules = []
+function addCSSRules(text) {
+  const ast = css.parse(text)
+  rules.push(...ast.stylesheet.rules)
+}
+
+function match(element, selector) {
+  if (!selector || !element.attributes) return false
+  if (selector.charAt(0) === '#') {
+    const attr = element.attributes.filter(attr => attr.name === 'id')[0]
+    if (attr && attr.value === selector.replace('#', '')) return true
+  } else if (selector.charAt(0) === '.') {
+    const attr = element.attributes.filter(attr => attr.name === 'class')
+    if (attr && attr.value === selector.replace('.', '')) return true
+  } else {
+    if (element.tagName === selector) {
+      return true
+    }
+  }
+  return false
+}
+
+function computeCSS(element) {
+  // 获取父元素序列
+  // 调用slice是复制一遍stack,防止之后stack变化造成的污染
+  // 获得和计算父元素匹配的顺序是从内向外 所以需要做一个 reverse 操作
+  const elements = stack.slice().reverse()
+
+  if(!elements.computedStyle) element.computedStyle = {}
+
+  for(let rule of rules) {
+    const selectorParts = rule.selectors[0].split(' ').reverse()
+    if (!match(element, selectorParts[0])) continue
+    let matched = false
+    
+    let j = 1
+    for(let i = 0; i < elements.length; i++) {
+      if (match(elements[i], selectorParts[j])) {
+        j++
+      }
+    }
+
+    if (j >= selectorParts.length) matched = true
+
+    if (matched) {
+      const computedStyle = element.computedStyle
+      for(let declaration of rule.declarations) {
+        if (!computedStyle[declaration.property]) computedStyle[declaration.property] = {}
+        computedStyle[declaration.property].value = declaration.value 
+      }
+      console.log(element.computedStyle)
+    }
+  }
+  console.log(rules)
+  console.log('compute CSS for Element', element)
+}
+
 function emit(token) {
   let top = stack[stack.length - 1]
 
@@ -17,13 +77,16 @@ function emit(token) {
     element.tagName = token.tagName
 
     for (let p in token) {
-      if (p !== 'type' && p !== 'tagName') {
+      if (p !== 'type' || p !== 'tagName') {
         element.attributes.push({
           name: p,
           value: token[p]
         })
       }
     }
+
+    computeCSS(element)
+
     // 对偶操作
     top.children.push(element)
     element.parent = top
@@ -35,6 +98,10 @@ function emit(token) {
     if (top.tagName !== token.tagName) {
       throw new Error('Tag start end doesnt match!')
     } else {
+      // --------------- 遇到style标签时，执行添加CSS规则的操作 ---------------//
+      if (top.tagName === 'style') {
+        addCSSRules(top.children[0].content)
+      }
       // 相同则 出栈
       stack.pop()
     }
@@ -140,7 +207,7 @@ function beforeAttributeName(c) {
   } else if (c === '/' || c === '>' || c === EOF) {
     return afterAttributeName(c)
   } else if (c === '=') {
-    return beforeAttributeName
+    // return beforeAttributeName
   } else {
     currentAttribute = {
       name: '',
@@ -200,13 +267,14 @@ function doubleQuotedAttributeValue(c) {
 function singleQuotedAttributeValue(c) {
   if (c === `'`) {
     currentToken[currentAttribute.name] = currentAttribute.value
+    return afterQuotedAttributeValue
   } else if (c === '\u0000') {
 
   } else if (c === EOF) {
     
   } else {
     currentAttribute.value += c
-    return doubleQuotedAttributeValue
+    return singleQuotedAttributeValue
   }
 }
 
@@ -276,7 +344,7 @@ function afterAttributeName(c) {
 module.exports.parseHTML = function parseHTML(html) {
   let state = data
   for(let c of html) {
-    state = state(c)
+    if (state) state = state(c)
   }
   state = state(EOF)
   return stack[0]

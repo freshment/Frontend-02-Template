@@ -18,5 +18,5 @@ void async function() {
 
   const res = await request.send()
   let dom = parser.parseHTML(res.body)
-  console.log('dom:', dom)
+  console.log('dom', dom)
 }()
