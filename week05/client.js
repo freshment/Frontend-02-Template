@@ -1,5 +1,7 @@
 const Request = require('./utils/request') // 请求 类
 const parser = require('./utils/parser')
+const render = require('./utils/render')
+const images = require('images')
 
 // 发起请求
 void async function() {
@@ -18,5 +20,13 @@ void async function() {
 
   const res = await request.send()
   let dom = parser.parseHTML(res.body)
-  console.log('dom', dom)
+
+  let viewport = images(800, 600)
+
+  render(viewport, dom.children[0].children[3].children[1].children[3])
+
+  viewport.save('viewport.jpg')
+  console.log('dom:', dom)
+  console.log(JSON.stringify(dom, null, '  '))
+  console.log('')
 }()

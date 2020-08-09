@@ -1,5 +1,7 @@
 const css = require('css')
 const EOF = Symbol('EOF') // End Of File
+const layout = require('./layout') // 布局函数
+
 let currentToken = null
 let currentAttribute = null
 let currentTextNode = null
@@ -13,6 +15,7 @@ function addCSSRules(text) {
   rules.push(...ast.stylesheet.rules)
 }
 
+// 进行 elemtn 与 选择器 匹配
 function match(element, selector) {
   if (!selector || !element.attributes) return false
   if (selector.charAt(0) === '#') {
@@ -29,6 +32,31 @@ function match(element, selector) {
   return false
 }
 
+// css优先级比较原理
+function specificity(selector) {
+  const p = [0, 0, 0, 0] // 行内样式, id, class, TagName
+  const selectorParts = selector.split(' ')
+  // 假设只有简单选择器
+  for (let part of selectorParts) {
+    if (part.charAt(0) === '#') {
+      p[1]++
+    } else if (part.charAt(0) === '.') {
+      P[2]++
+    } else {
+      p[3]++
+    }
+  }
+  return p
+}
+
+// 比较两个选择器的优先级
+function compare(sp1, sp2) {
+  if (sp1[0] - sp2[0]) return sp1[0] - sp2[0]
+  if (sp1[1] - sp2[1]) return sp1[1] - sp2[1]
+  if (sp1[2] - sp2[2]) return sp1[2] - sp2[2]
+  return sp1[3] - sp2[3]
+}
+
 function computeCSS(element) {
   // 获取父元素序列
   // 调用slice是复制一遍stack,防止之后stack变化造成的污染
@@ -43,7 +71,7 @@ function computeCSS(element) {
     let matched = false
     
     let j = 1
-    for(let i = 0; i < elements.length; i++) {
+    for(let i = 0; i < elements.length && j < selectorParts.length; i++) {
       if (match(elements[i], selectorParts[j])) {
         j++
       }
@@ -52,10 +80,18 @@ function computeCSS(element) {
     if (j >= selectorParts.length) matched = true
 
     if (matched) {
+      const sp = specificity(rule.selectors[0])
       const computedStyle = element.computedStyle
       for(let declaration of rule.declarations) {
         if (!computedStyle[declaration.property]) computedStyle[declaration.property] = {}
-        computedStyle[declaration.property].value = declaration.value 
+
+        if (!computedStyle[declaration.property].specificity) {
+          computedStyle[declaration.property].value = declaration.value
+          computedStyle[declaration.property].specificity = sp
+        } else if (compare(computedStyle[declaration.property].specificity, sp) < 0) {
+          computedStyle[declaration.property].value = declaration.value
+          computedStyle[declaration.property].specificity = sp
+        }
       }
       console.log(element.computedStyle)
     }
@@ -89,7 +125,7 @@ function emit(token) {
 
     // 对偶操作
     top.children.push(element)
-    element.parent = top
+    // element.parent = top
     // 是 开始标签 就 入栈
     if (!token.isSelfClosing) stack.push(element)
 
@@ -102,6 +138,8 @@ function emit(token) {
       if (top.tagName === 'style') {
         addCSSRules(top.children[0].content)
       }
+      // 进行布局
+      layout(top)
       // 相同则 出栈
       stack.pop()
     }
@@ -192,6 +230,7 @@ function tagName(c) {
 function selfClosingStartTag(c) {
   if (c === '>') {
     currentToken.isSelfClosing = true
+    emit(currentToken)
     return data
   } else if (c === 'EFO') {
     // 报错
@@ -282,6 +321,7 @@ function afterQuotedAttributeValue(c) {
   if (c.match(/^[\t\n\f ]$/)) {
     return beforeAttributeName
   } else if (c === '/') {
+    emit(currentToken)
     return selfClosingStartTag
   } else if (c === '>') {
     currentToken[currentAttribute.name] = currentAttribute.value
@@ -301,6 +341,7 @@ function unquotedAttributeValue(c) {
     return beforeAttributeName
   } else if (c === '/') {
     currentToken[currentAttribute.name] = currentAttribute.value
+    emit(currentToken)
     return selfClosingStartTag
   } else if (c === '>') {
     currentToken[currentAttribute.name] = currentAttribute.value
