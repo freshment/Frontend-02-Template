@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    div {
+      background: grey;
+      display: inline-block;
+      margin: 30px;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    .red.light {
+      background: red;
+    }
+    .green.light {
+      background: green;
+    }
+    .yellow.light {
+      background: yellow
+    }
+  </style>
+</head>
+<body>
+  <div class="green"></div>
+  <div class="yellow"></div>
+  <div class="red"></div>
+
+  <section>
+    <button id="next">Next</button>
+  </section>
+  <script>
+    function red() {
+      var lights = document.getElementsByTagName('div')
+      for (var i = 0; i < lights.length; i++) lights[i].classList.remove('light')
+      document.getElementsByClassName('red')[0].classList.add('light')
+    }
+    function green() {
+      var lights = document.getElementsByTagName('div')
+      for (var i = 0; i < lights.length; i++) lights[i].classList.remove('light')
+      document.getElementsByClassName('green')[0].classList.add('light')
+    }
+    function yellow() {
+      var lights = document.getElementsByTagName('div')
+      for (var i = 0; i < lights.length; i++) lights[i].classList.remove('light')
+      document.getElementsByClassName('yellow ')[0].classList.add('light')
+    }
+
+    // old
+    function go() {
+      green()
+      setTimeout(function() {
+        yellow()
+        setTimeout(function() {
+          red()
+          setTimeout(function() {
+            go()
+          }, 500)
+        }, 300)
+      }, 1000)
+    }
+
+    // // promise
+    function sleep(t) {
+      return new Promise((resolve, reject) => {
+        setTimeout(resolve, t)
+      })
+    }
+
+    function go() {
+      green()
+      sleep(1000).then(() => {
+        yellow()
+        return sleep(300)
+      }).then(() => {
+        red()
+        return sleep(500)
+      }).then(go)
+    }
+
+    // async/await
+    function sleep(t) {
+      return new Promise((resolve, reject) => {
+        setTimeout(resolve, t)
+      })
+    }
+    async function go() {
+      while(true) {
+        green()
+        await sleep(1000)
+        yellow()
+        await sleep(300)
+        red()
+        await sleep(200)
+      }
+    }
+
+    // 手动控制
+    function happen(element, eventName) {
+      return new Promise((resolve, reject) => {
+        element.addEventListener(eventName, resolve, { once: true })
+      })
+    }
+    async function go() {
+      while(true) {
+        green()
+        await happen(document.getElementById('next'), 'click')
+        yellow()
+        await happen(document.getElementById('next'), 'click')
+        red()
+        await happen(document.getElementById('next'), 'click')
+      }
+    }
+  </script>
+</body>
+</html>

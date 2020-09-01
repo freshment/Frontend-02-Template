@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    .cell {
+      width: 100px;
+      height: 100px;
+      background: green;
+      display: inline-block;
+      border: 1px solid white;
+      vertical-align: middle;
+      line-height: 100px;
+      font-size: 50px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="board" />
+</body>
+
+<script>
+  let pattern = [
+    [0, 0, 2],
+    [0, 1, 0],
+    [0, 0, 0]
+  ] // 0 表示'空'， 1 表示'圈', 2 表示'叉'
+  let color = 1
+
+  // step 1: 画出布局
+  function show(pattern) {
+    const board = document.getElementById('board')
+    board.innerHTML = ''
+
+    for(let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        const cell = document.createElement('div')
+        cell.classList.add('cell')
+        cell.innerText =
+          pattern[i][j] == 2 ? '❌' :
+          pattern[i][j] == 1 ? '⭕️' : ''
+        cell.addEventListener('click', () => move(j, i))
+        board.appendChild(cell)
+      }
+      board.appendChild(document.createElement('br'))
+    }
+  }
+
+  // step2: 点击
+  function move(x, y) {
+    pattern[y][x] = color
+
+    if (check(pattern, color)) {
+      alert(color == 2 ? '❌ is Winner!' : '⭕️ is Winner')
+    }
+
+    color = 3 - color // 1 or 2
+    show(pattern)
+
+    if (willWin(pattern, color)) console.log(color == 2 ? '❌ will Win!' : '⭕️ will Win')
+  }
+
+  // step3: 检查是否胜利
+  function check(pattern, color) {
+    // 横行
+    for (let i = 0; i < 3; i++) {
+      let win = true
+      for (let j = 0; j < 3; j++) {
+        if (pattern[i][j] !== color) win = false
+      }
+      if (win) return true
+    }
+    // 竖行
+    for (let i = 0; i < 3; i++) {
+      let win = true
+      for (let j = 0; j < 3; j++) {
+        if (pattern[j][i] !== color) win = false
+      }
+      if (win) return true
+    }
+    // 坐标相等的斜向 x + y = 2
+    {
+      let win = true
+      for (let j = 0; j < 3; j++) {
+        if (pattern[j][2 - j] !== color) win = false
+      }
+      if (win) return true
+    }    
+    // 坐标相等的斜向 x = y
+    {
+      let win = true
+      for (let j = 0; j < 3; j++) {
+        if (pattern[j][j] !== color) win = false
+      }
+      if (win) return true
+    }
+    return false
+  }
+
+  function clone(pattern) {
+    return JSON.parse(JSON.stringify(pattern))
+  }
+
+  // step4: ai功能, 提示即将胜利的一方
+  function willWin(pattern, color) {
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        if (pattern[i][j]) continue
+        let tmp = clone(pattern)
+        tmp[i][j] = color
+        if (check(tmp, color)) {
+          return [j, i]
+        }
+      }
+    }
+    return null
+  }
+
+  function bestChoice(pattern, color) {
+    let p
+    if (p = willWin(pattern, color)) {
+      return {
+        point: p,
+        result: 1 // -1 输， 0 和棋， 1 赢
+      }
+    }
+    let result = -2
+    let point = null
+    for(let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        if (pattern[i][j]) continue
+        let tmp = clone(pattern)
+        tmp[i][j] = color
+        let r = bestChoice(tmp, 3 - color).result
+
+        if (- r > result) {
+          result = - r
+          point = [j, i]
+        }
+      }
+    }
+    return {
+      point: point,
+      result: point ? result : 0
+    }
+  }
+
+  show(pattern)
+  console.log(bestChoice(pattern, color))
+</script>
+</html>
