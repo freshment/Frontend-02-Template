@@ -1,7 +1,4 @@
-学习笔记
+# week11学习笔记
 
-#学号: G20200447020388
-#姓名: 周煌
-#班级: 2班
-#小组: 6组
-#作业&总结链接: https://github.com/freshment/Frontend-02-Template/tree/master/week10
+1. 对vue 3.0的 reactivity有了一定的认识
+2. 原来拖拽还可以用 mousedown 这样的方式去实现，且 document的mouse事件绑定甚至可以监听到鼠标移出浏览器

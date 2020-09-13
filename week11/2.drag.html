@@ -1,0 +1,78 @@
+<div id="container">
+  文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字
+  文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字
+  文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字
+  文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字
+  文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字
+  文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字
+  文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字
+  文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字
+  文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字
+  文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字
+  文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字
+  文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字 文字
+</div>
+<div id="draggable" style="display: inline-block; width: 100px; height: 100px; background-color: pink;" />
+
+<script>
+  // ------------------------- 拖拽逻辑 Start -------------------------
+  let draggable = document.getElementById('draggable')
+
+  let baseX = 0
+  let baseY = 0
+
+  draggable.addEventListener('mousedown', function(event) {
+    // 存储起始点
+    let startX = event.clientX
+    let startY = event.clientY
+
+    // 防止鼠标移出 div 后，掉下来的情况发生，我们监听 document的 mousemove、 mouseup事件
+    // document监听 哪怕鼠标移出 浏览器的范围 它依旧能监听到事件
+    let move = event => {
+      let range = getNearest(event.clientX, event.clientY)
+      range.insertNode(draggable)
+      // draggable.style.transform = `translate(${baseX + event.clientX - startX}px, ${baseY + event.clientY - startY}px)`
+    }
+    let up = event => {
+      baseX = baseX + event.clientX - startX
+      baseY = baseY + event.clientY - startY
+
+      document.removeEventListener('mousemove', move)
+      document.removeEventListener('mouseup', up)
+    }
+  
+    document.addEventListener('mousemove', move)
+    document.addEventListener('mouseup', up)
+  })
+  // ------------------------- 拖拽逻辑 End -------------------------
+
+  // ------------------------- 插空 Start -------------------------
+  let container = document.getElementById('container')
+  let ranges = []
+  for(let i = 0; i < container.childNodes[0].textContent.length; i++) {
+    let range = document.createRange()
+    range.setStart(container.childNodes[0], i)
+    range.setEnd(container.childNodes[0], i)
+
+    console.log(range.getBoundingClientRect());
+    ranges.push(range)
+  }
+
+  function getNearest(x, y) {
+    let min = Infinity
+    let nearest = null
+
+    for (let range of ranges) {
+      let rect = range.getBoundingClientRect()
+      let distance = (rect.x - x) ** 2 + (rect.y - y) ** 2
+      if (distance < min) {
+        nearest = range
+        min = distance
+      }
+    }
+    return nearest
+  }
+  // 防止默认 选中效果
+  document.addEventListener('selectstart', e => e.preventDefault())
+  // ------------------------- 插空 End -------------------------  
+</script>
